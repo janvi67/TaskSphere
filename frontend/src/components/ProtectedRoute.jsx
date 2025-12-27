@@ -3,7 +3,7 @@ import useAuthStore from "../store/authStore";
 
 const ProtectedRoute = ({ children }) => {
   const { token } = useAuthStore();
-  return token ? children : <Navigate to="/login" />;
+  return token ? children : <Navigate to="/" />;
 };
 
 export default ProtectedRoute;

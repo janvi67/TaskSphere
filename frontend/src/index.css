@@ -37,3 +37,17 @@ body {
 .table-td {
   @apply px-4 py-2 border-b;
 }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}

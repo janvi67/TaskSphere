@@ -2,7 +2,8 @@ import { Navigate, Outlet } from "react-router-dom";
 
 export default function PublicRoute() {
   const token = localStorage.getItem("token");
-  const role = JSON.parse(localStorage.getItem("role")); // must store user on login
+const role = localStorage.getItem("role"); // ✅ no JSON.parse
+
 
   if (token && role) {
     switch (role) {
@@ -17,7 +18,7 @@ export default function PublicRoute() {
       case "EMPLOYEE":
         return <Navigate to="/dashboard/employee" replace />;
       default:
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
   }
 

@@ -5,26 +5,37 @@ import {
   fetchTaskHistory
 } from "../services/taskService";
 
+const StatusBadge = ({ status }) => {
+  const styles = {
+    COMPLETED: "bg-emerald-100 text-emerald-700",
+    IN_PROGRESS: "bg-amber-100 text-amber-700",
+    PENDING: "bg-gray-100 text-gray-600"
+  };
+
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
+      {status}
+    </span>
+  );
+};
+
 const Tasks = () => {
-  const [tasks, setTasks] = useState([]); // always array
+  const [tasks, setTasks] = useState([]);
   const [history, setHistory] = useState([]);
-  console.log("🚀 ~ Tasks ~ history:", history)
   const [selectedTask, setSelectedTask] = useState(null);
+  const [loading, setLoading] = useState(true);
   const fetchedRef = useRef(false);
 
   const loadTasks = useCallback(async () => {
     try {
       const res = await fetchTasks();
-
-      // ✅ normalize response
-      const taskList = Array.isArray(res.data)
-        ? res.data
-        : res.data?.tasks || [];
-
+      const taskList = Array.isArray(res.data) ? res.data : res.data?.tasks || [];
       setTasks(taskList);
     } catch (err) {
       console.error("Failed to load tasks", err);
-      setTasks([]); // fail-safe
+      setTasks([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -35,146 +46,136 @@ const Tasks = () => {
   }, [loadTasks]);
 
   const changeStatus = async (id, status) => {
-    await updateTaskStatus(id, {
-      status,
-      comment: "Updated from dashboard"
-    });
+    await updateTaskStatus(id, { status, comment: "Updated from dashboard" });
     loadTasks();
   };
 
   const openHistory = async (taskId) => {
-    console.log("🚀 ~ openHistory ~ taskId:", taskId)
     const res = await fetchTaskHistory(taskId);
-    console.log("🚀 ~ openHistory ~ res:", res.data?.histories)
-    setHistory(Array.isArray(res.data?.histories) ? res.data?.histories : []);
+    setHistory(Array.isArray(res.data?.histories) ? res.data.histories : []);
     setSelectedTask(taskId);
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-4">Tasks</h1>
+    <div className="p-6 animate-fade-in">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Tasks</h1>
+        <p className="text-gray-500 mt-1">Manage and track all assigned tasks</p>
+      </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="table-th">Title</th>
-              <th className="table-th">Status</th>
-              <th className="table-th">Action</th>
-              <th className="table-th">History</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {tasks.length === 0 ? (
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm text-gray-700">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <td colSpan="4" className="table-td text-center text-gray-500">
-                  No tasks found
-                </td>
+                <th className="px-4 py-3 text-left font-semibold">Title</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th className="px-4 py-3 text-left font-semibold">Action</th>
+                <th className="px-4 py-3 text-left font-semibold">History</th>
               </tr>
-            ) : (
-              tasks.map((t) => (
-                <tr key={t._id}>
-                  <td className="table-td">{t.title}</td>
-                  <td className="table-td">{t.status}</td>
-                  <td className="table-td">
-                    <select
-                      className="border p-1"
-                      value={t.status}
-                      onChange={(e) =>
-                        changeStatus(t._id, e.target.value)
-                      }
-                    >
-                      <option>PENDING</option>
-                      <option>IN_PROGRESS</option>
-                      <option>COMPLETED</option>
-                    </select>
-                  </td>
-                  <td className="table-td">
-                    <button
-                      className="text-primary underline"
-                      onClick={() => openHistory(t._id)}
-                    >
-                      View
-                    </button>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="px-4 py-6 text-center text-gray-400">
+                    Loading tasks...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : tasks.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="px-4 py-6 text-center text-gray-400">
+                    No tasks found
+                  </td>
+                </tr>
+              ) : (
+                tasks.map((t) => (
+                  <tr key={t._id} className="border-t border-gray-200 hover:bg-gray-50 transition">
+                    <td className="px-4 py-3 font-medium">{t.title}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={t.status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        className="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={t.status}
+                        onChange={(e) => changeStatus(t._id, e.target.value)}
+                      >
+                        <option>PENDING</option>
+                        <option>IN_PROGRESS</option>
+                        <option>COMPLETED</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        className="text-indigo-600 hover:underline font-medium"
+                        onClick={() => openHistory(t._id)}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* History Modal */}
-{/* History Modal */}
-{selectedTask && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-    <div className="bg-white p-4 rounded w-[700px] max-h-[80vh] overflow-y-auto">
-      <h3 className="font-semibold mb-3">Task History</h3>
+      {selectedTask && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-[90%] max-w-4xl max-h-[80vh] overflow-y-auto animate-fade-in">
+            <h3 className="text-xl font-semibold mb-4 text-gray-800">
+              Task History
+            </h3>
 
-      {history.length === 0 ? (
-        <p className="text-sm text-gray-500">No history found</p>
-      ) : (
-        <table className="w-full text-sm border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="table-th">Task</th>
-              <th className="table-th">Status</th>
-              <th className="table-th">Comment</th>
-              <th className="table-th">Updated By</th>
-              <th className="table-th">Created At</th>
-            </tr>
-          </thead>
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-500">No history found</p>
+            ) : (
+              <table className="min-w-full text-sm text-gray-700 border rounded-lg overflow-hidden">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">Task</th>
+                    <th className="px-3 py-2 text-left font-semibold">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold">Comment</th>
+                    <th className="px-3 py-2 text-left font-semibold">Updated By</th>
+                    <th className="px-3 py-2 text-left font-semibold">Created At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((h) => (
+                    <tr key={h._id} className="border-t">
+                      <td className="px-3 py-2">{h.task?.title || "N/A"}</td>
+                      <td className="px-3 py-2">
+                        <StatusBadge status={h.status} />
+                      </td>
+                      <td className="px-3 py-2">{h.comment || "-"}</td>
+                      <td className="px-3 py-2">
+                        {h.updatedBy?.name} ({h.updatedBy?.role})
+                      </td>
+                      <td className="px-3 py-2">
+                        {new Date(h.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
 
-          <tbody>
-            {history.map((h) => (
-              <tr key={h._id}>
-                <td className="table-td">
-                  {h.task?.title || "N/A"}
-                </td>
-
-                <td className="table-td">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold
-                      ${
-                        h.status === "COMPLETED"
-                          ? "bg-green-100 text-green-700"
-                          : h.status === "IN_PROGRESS"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                  >
-                    {h.status}
-                  </span>
-                </td>
-
-                <td className="table-td">
-                  {h.comment || "-"}
-                </td>
-
-                <td className="table-td">
-                  {h.updatedBy?.name} ({h.updatedBy?.role})
-                </td>
-
-                <td className="table-td">
-                  {new Date(h.createdAt).toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <div className="mt-5 text-right">
+              <button
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                onClick={() => setSelectedTask(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-
-      <button
-        className="btn-primary mt-4"
-        onClick={() => setSelectedTask(null)}
-      >
-        Close
-      </button>
-    </div>
-  </div>
-)}
-
     </div>
   );
 };
